@@ -1,17 +1,19 @@
-from llama_index.llms.ollama import Ollama
-from llama_parse import LlamaParse
+import ast
+import os
+
+from dotenv import load_dotenv
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, PromptTemplate
-from llama_index.core.embeddings import resolve_embed_model
-from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.core.agent import ReActAgent
-from pydantic import BaseModel
+from llama_index.core.embeddings import resolve_embed_model
 from llama_index.core.output_parsers import PydanticOutputParser
 from llama_index.core.query_pipeline import QueryPipeline
-from prompts import context, code_parser_template
+from llama_index.core.tools import QueryEngineTool, ToolMetadata
+from llama_index.llms.ollama import Ollama
+from llama_parse import LlamaParse
+from pydantic import BaseModel
+
 from code_reader import code_reader
-from dotenv import load_dotenv
-import os
-import ast
+from prompts import context, code_parser_template
 
 load_dotenv()
 
@@ -79,5 +81,5 @@ while (prompt := input("Enter a prompt (q to quit): ")) != "q":
         with open(os.path.join("output", filename), "w") as f:
             f.write(cleaned_json["code"])
         print("Saved file", filename)
-    except:
+    except OSError:
         print("Error saving file...")
