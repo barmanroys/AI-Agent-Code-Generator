@@ -4,3 +4,7 @@
 
 .venv/
 **.log
+
+.ipynb_checkpoints/**
+**.ipynb
+
