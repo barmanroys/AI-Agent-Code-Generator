@@ -17,15 +17,13 @@ from prompts import context, code_parser_template
 
 load_dotenv()
 
-llm = Ollama(model="mistral", request_timeout=30.0)
-
 parser = LlamaParse(result_type="markdown")
-
 file_extractor = {".pdf": parser}
-documents = SimpleDirectoryReader("./data", file_extractor=file_extractor).load_data()
+documents = SimpleDirectoryReader(input_dir="./data", file_extractor=file_extractor).load_data()
+embed_model = resolve_embed_model(embed_model="local:BAAI/bge-m3")
+vector_index = VectorStoreIndex.from_documents(documents=documents, embed_model=embed_model)
 
-embed_model = resolve_embed_model("local:BAAI/bge-m3")
-vector_index = VectorStoreIndex.from_documents(documents, embed_model=embed_model)
+llm = Ollama(model="mistral", request_timeout=60*60)
 query_engine = vector_index.as_query_engine(llm=llm)
 
 tools = [
@@ -39,7 +37,8 @@ tools = [
     code_reader,
 ]
 
-code_llm = Ollama(model="codellama")
+code_llm = Ollama(model="codellama", request_timeout=60*60)
+
 agent = ReActAgent.from_tools(tools, llm=code_llm, verbose=True, context=context)
 
 
@@ -61,7 +60,7 @@ while (prompt := input("Enter a prompt (q to quit): ")) != "q":
         try:
             result = agent.query(prompt)
             next_result = output_pipeline.run(response=result)
-            cleaned_json = ast.literal_eval(str(next_result).replace("assistant:", ""))
+            cleaned_json = ast.literal_eval(str(next_result).replace(__old="assistant:", __new=""))
             break
         except Exception as e:
             retries += 1
@@ -74,6 +73,7 @@ while (prompt := input("Enter a prompt (q to quit): ")) != "q":
     print("Code generated")
     print(cleaned_json["code"])
     print("\n\nDesciption:", cleaned_json["description"])
+
 
     filename = cleaned_json["filename"]
 
