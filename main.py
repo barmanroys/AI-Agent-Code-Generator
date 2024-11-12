@@ -1,5 +1,6 @@
-import ast
+import json
 import os
+from typing import Dict
 
 from dotenv import load_dotenv
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, PromptTemplate
@@ -43,6 +44,7 @@ agent = ReActAgent.from_tools(tools, llm=code_llm, verbose=True, context=context
 
 
 class CodeOutput(BaseModel):
+    """Role of this class is to provide the json format for the code prompt template"""
     code: str
     description: str
     filename: str
@@ -52,22 +54,22 @@ parser = PydanticOutputParser(output_cls=CodeOutput)
 code_parser_template = """Parse the response from a previous LLM into a description and a string of valid code, 
                             also come up with a valid filename this could be saved as that doesnt contain special characters. 
                             Here is the response: {response}. You should parse this in the following JSON Format: """
-json_prompt_str = parser.format(code_parser_template)
-json_prompt_tmpl = PromptTemplate(json_prompt_str)
+json_prompt_str: str = parser.format(code_parser_template)
+json_prompt_tmpl: PromptTemplate = PromptTemplate(json_prompt_str)
 
 while (prompt := input("Enter a prompt (q to quit): ")) != "q":
     retries = 0
 
     while retries < 3:
         try:
-            result = agent.query(prompt)
+            result = agent.query(str_or_query_bundle=prompt)
             # Format the prompt, call the LLM
-            code_prompt = json_prompt_tmpl.format(response=str(result))
+            code_prompt: str = json_prompt_tmpl.format(response=str(result))
             # Use the code itself as the new prompt
             next_result = llm.complete(prompt=code_prompt)
 
             # Convert the string expression of the dictionary to a dictionary.
-            cleaned_json = ast.literal_eval(node_or_string=str(next_result))
+            cleaned_json: Dict = json.loads(s=str(next_result))
             break
         except Exception as e:
             retries += 1
